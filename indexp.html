@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Analisis Kelapa Sawit | Palm Oil Analytics</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* Variabel Warna */
+        :root {
+            --hijau-utama: #1E8449; /* Hijau Tua/Kelapa Sawit */
+            --hijau-sekunder: #2ECC71; /* Hijau Sedang */
+            --hijau-terang: #D1F2EB; /* Hijau Sangat Terang */
+            --latar-belakang: #F8F9FA;
+            --teks-gelap: #2C3E50;
+            --bayangan-ringan: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Gaya Umum */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--latar-belakang);
+            color: var(--teks-gelap);
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: var(--hijau-utama);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--bayangan-ringan);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .header .icon-palm {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+        
+        /* Tata Letak Konten */
+        .container {
+            padding: 20px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Kartu (Card) untuk Visualisasi dan Data */
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--bayangan-ringan);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        .card h2 {
+            color: var(--hijau-utama);
+            border-bottom: 2px solid var(--hijau-terang);
+            padding-bottom: 10px;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .card h2 i {
+            margin-right: 10px;
+        }
+
+        /* Grid untuk Grafik */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .chart-grid-full {
+             display: grid;
+             grid-template-columns: 1fr;
+             gap: 20px;
+        }
+        
+        /* Tombol */
+        .btn-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            background-color: var(--hijau-sekunder);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            background-color: #27AE60;
+        }
+        
+        /* Gaya Tabel DataTables */
+        #dataTable_wrapper {
+            padding-top: 15px;
+        }
+        
+        table.dataTable thead th {
+            background-color: var(--hijau-terang);
+            color: var(--teks-gelap);
+            border-bottom: 3px solid var(--hijau-utama);
+        }
+        
+        table.dataTable tfoot th {
+             border-top: 1px solid #ccc;
+             font-weight: bold;
+        }
+        
+        .dataTables_filter input {
+             border: 1px solid var(--hijau-utama);
+             padding: 8px;
+             border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1><i class="fas fa-seedling icon-palm"></i> Dasbor Analisis Kelapa Sawit</h1>
+        <div class="user-info">
+            <span style="margin-right: 15px;">Halo, Manajer/Teknisi Pabrik</span>
+            <i class="fas fa-user-circle" style="font-size: 1.5em;"></i>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <div class="card">
+            <h2><i class="fas fa-file-upload"></i> Kelola Data</h2>
+            <div class="btn-group">
+                 <input type="file" id="dataUploader" accept=".csv, .json" style="padding: 5px; border: 1px solid var(--hijau-utama); border-radius: 5px;">
+                 <button class="btn" onclick="unduhSemuaData()"><i class="fas fa-download"></i> Unduh Data Saat Ini</button>
+                 <small style="color: #E74C3C;">*Unggah file CSV atau JSON untuk memuat data baru.</small>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            
+            <div class="card">
+                <h2><i class="fas fa-chart-bar"></i> Produksi Tandan Buah Segar (TBS)</h2>
+                <canvas id="produksiChart"></canvas>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-chart-line"></i> Harga CPO (Crude Palm Oil)</h2>
+                <canvas id="hargaChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-grid">
+             <div class="card">
+                <h2><i class="fas fa-chart-pie"></i> Distribusi Area Lahan (Ha)</h2>
+                <canvas id="areaChart"></canvas>
+            </div>
+            
+             <div class="card">
+                <h2><i class="fas fa-balance-scale"></i> Penjualan vs Produksi (Ton)</h2>
+                <canvas id="penjualanChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-grid-full">
+            <div class="card">
+                <h2><i class="fas fa-table"></i> Data Operasional Detail</h2>
+                <table id="dataTable" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Periode</th>
+                            <th>Unit/Area</th>
+                            <th>Produksi (Ton)</th>
+                            <th>Penjualan (Ton)</th>
+                            <th>Area (Ha)</th>
+                            <th>Harga CPO ($/Ton)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Periode</th>
+                            <th>Unit/Area</th>
+                            <th>Produksi (Ton)</th>
+                            <th>Penjualan (Ton)</th>
+                            <th>Area (Ha)</th>
+                            <th>Harga CPO ($/Ton)</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.6.0/dist/chart.min.js"></script>
+
+    <script>
+        // --- DATA DUMMY (Akan diganti dengan data dari file yang diunggah) ---
+        let dataKelapaSawit = [
+            { periode: 'Jan-2024', unit: 'A', produksi: 1500, penjualan: 1400, area: 500, harga: 850 },
+            { periode: 'Jan-2024', unit: 'B', produksi: 2200, penjualan: 2000, area: 700, harga: 850 },
+            { periode: 'Feb-2024', unit: 'A', produksi: 1800, penjualan: 1750, area: 500, harga: 865 },
+            { periode: 'Feb-2024', unit: 'B', produksi: 2500, penjualan: 2400, area: 700, harga: 865 },
+            { periode: 'Mar-2024', unit: 'A', produksi: 1950, penjualan: 1900, area: 500, harga: 880 },
+            { periode: 'Mar-2024', unit: 'B', produksi: 2700, penjualan: 2600, area: 700, harga: 880 },
+            { periode: 'Apr-2024', unit: 'A', produksi: 2100, penjualan: 2050, area: 500, harga: 875 },
+            { periode: 'Apr-2024', unit: 'B', produksi: 2850, penjualan: 2700, area: 700, harga: 875 },
+        ];
+        
+        let myProdChart, myHargaChart, myAreaChart, myPenjualanChart;
+        let dataTableInstance;
+
+        // --- FUNGSI UTAMA UNTUK MEMUAT DAN MERENDER DATA ---
+        function renderDashboard(data) {
+            // 1. Inisialisasi/Muat Ulang Tabel DataTables
+            initDataTable(data);
+
+            // 2. Persiapkan Data untuk Grafik
+            const chartData = prepareChartData(data);
+
+            // 3. Render Grafik
+            renderProduksiChart(chartData.produksi, chartData.periode);
+            renderHargaChart(chartData.harga, chartData.periode);
+            renderAreaChart(chartData.area);
+            renderPenjualanChart(chartData.penjualan.produksi, chartData.penjualan.penjualan, chartData.periode);
+            
+            // Simpan data terbaru
+            dataKelapaSawit = data;
+        }
+        
+        // --- PREPARASI DATA UNTUK CHART.JS ---
+        function prepareChartData(data) {
+             const groupedByPeriod = data.reduce((acc, item) => {
+                 const period = item.periode;
+                 acc[period] = acc[period] || { totalProduksi: 0, totalPenjualan: 0, harga: 0, area: {} };
+                 acc[period].totalProduksi += item.produksi;
+                 acc[period].totalPenjualan += item.penjualan;
+                 acc[period].harga = item.harga; // Anggap harga sama per periode
+                 acc[period].area[item.unit] = (acc[period].area[item.unit] || 0) + item.area;
+                 return acc;
+             }, {});
+
+             const periods = Object.keys(groupedByPeriod).sort();
+             
+             const produksiData = periods.map(p => groupedByPeriod[p].totalProduksi);
+             const hargaData = periods.map(p => groupedByPeriod[p].harga);
+             const penjualanProduksiData = periods.map(p => groupedByPeriod[p].totalProduksi);
+             const penjualanPenjualanData = periods.map(p => groupedByPeriod[p].totalPenjualan);
+
+             // Data Area (Total Area Unik)
+             const totalAreaByUnit = data.reduce((acc, item) => {
+                 acc[item.unit] = (acc[item.unit] || 0) + item.area;
+                 return acc;
+             }, {});
+             
+             const areaLabels = Object.keys(totalAreaByUnit);
+             const areaValues = areaLabels.map(label => totalAreaByUnit[label]);
+
+             return {
+                 periode: periods,
+                 produksi: produksiData,
+                 harga: hargaData,
+                 area: { labels: areaLabels, values: areaValues },
+                 penjualan: { produksi: penjualanProduksiData, penjualan: penjualanPenjualanData }
+             };
+         }
+        
+        // --- INISIALISASI DATATABLES ---
+        function initDataTable(data) {
+            if (dataTableInstance) {
+                dataTableInstance.destroy(); // Hancurkan instance yang sudah ada
+            }
+
+            const tableBody = $('#dataTable tbody');
+            tableBody.empty(); // Kosongkan baris lama
+
+            // Masukkan data baru
+            data.forEach(item => {
+                tableBody.append(`
+                    <tr>
+                        <td>${item.periode}</td>
+                        <td>${item.unit}</td>
+                        <td>${item.produksi.toLocaleString()}</td>
+                        <td>${item.penjualan.toLocaleString()}</td>
+                        <td>${item.area.toLocaleString()}</td>
+                        <td>${item.harga.toLocaleString()}</td>
+                    </tr>
+                `);
+            });
+
+            // Inisialisasi DataTables dengan fitur filter
+            dataTableInstance = $('#dataTable').DataTable({
+                 paging: true,
+                 searching: true,
+                 ordering: true,
+                 info: true,
+                 scrollX: true 
+            });
+        }
+
+        // --- FUNGSI RENDER GRAFIK CHART.JS ---
+
+        // Grafik Batang: Produksi TBS
+        function renderProduksiChart(data, labels) {
+             if (myProdChart) myProdChart.destroy();
+             
+             const ctx = document.getElementById('produksiChart').getContext('2d');
+             myProdChart = new Chart(ctx, {
+                 type: 'bar',
+                 data: {
+                     labels: labels,
+                     datasets: [{
+                         label: 'Produksi TBS (Ton)',
+                         data: data,
+                         backgroundColor: varToRgba('--hijau-sekunder', 0.8),
+                         borderColor: varToRgba('--hijau-utama', 1),
+                         borderWidth: 1
+                     }]
+                 },
+                 options: {
+                     responsive: true,
+                     scales: {
+                         y: {
+                             beginAtZero: true
+                         }
+                     }
+                 }
+             });
+        }
+        
+        // Grafik Garis: Harga CPO Bulanan
+        function renderHargaChart(data, labels) {
+            if (myHargaChart) myHargaChart.destroy();
+            
+            const ctx = document.getElementById('hargaChart').getContext('2d');
+            myHargaChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Harga CPO ($/Ton)',
+                        data: data,
+                        borderColor: varToRgba('--hijau-utama', 1),
+                        backgroundColor: varToRgba('--hijau-utama', 0.2),
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Diagram Lingkaran: Distribusi Area Lahan
+        function renderAreaChart(data) {
+            if (myAreaChart) myAreaChart.destroy();
+            
+            const ctx = document.getElementById('areaChart').getContext('2d');
+            myAreaChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Area Lahan (Ha)',
+                        data: data.values,
+                        backgroundColor: [
+                            '#1E8449', // Hijau Tua
+                            '#2ECC71', // Hijau Sedang
+                            '#58D683', // Hijau Muda
+                            '#A9DFBF'  // Hijau Sangat Muda
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                             display: true,
+                             text: 'Total Area: ' + data.values.reduce((a, b) => a + b, 0).toLocaleString() + ' Ha'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Grafik Batang: Penjualan vs Produksi
+         function renderPenjualanChart(prodData, salesData, labels) {
+             if (myPenjualanChart) myPenjualanChart.destroy();
+             
+             const ctx = document.getElementById('penjualanChart').getContext('2d');
+             myPenjualanChart = new Chart(ctx, {
+                 type: 'bar',
+                 data: {
+                     labels: labels,
+                     datasets: [
+                         {
+                             label: 'Produksi (Ton)',
+                             data: prodData,
+                             backgroundColor: varToRgba('--hijau-utama', 0.7),
+                         },
+                         {
+                             label: 'Penjualan (Ton)',
+                             data: salesData,
+                             backgroundColor: varToRgba('--hijau-sekunder', 0.9),
+                         }
+                     ]
+                 },
+                 options: {
+                     responsive: true,
+                     scales: {
+                         x: {
+                             stacked: false,
+                         },
+                         y: {
+                             stacked: false,
+                             beginAtZero: true
+                         }
+                     }
+                 }
+             });
+         }
+        
+        // --- FUNGSI BANTU ---
+        
+        // Konversi variabel CSS ke nilai RGBA untuk Chart.js
+        function varToRgba(cssVar, alpha) {
+            const color = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+            if (color.startsWith('#')) {
+                // Konversi Hex ke RGB
+                let r = parseInt(color.substring(1, 3), 16);
+                let g = parseInt(color.substring(3, 5), 16);
+                let b = parseInt(color.substring(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            return color; // Kembalikan apa adanya jika bukan hex (Chart.js bisa menerima nama warna)
+        }
+        
+        // --- FUNGSI UNGGAH/EKSTRAKSI DATA ---
+        document.getElementById('dataUploader').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let newData = [];
+                const content = e.target.result;
+                
+                if (file.name.endsWith('.csv')) {
+                    newData = parseCSV(content);
+                } else if (file.name.endsWith('.json')) {
+                    try {
+                        newData = JSON.parse(content);
+                    } catch (error) {
+                         alert('Error memparsing file JSON.');
+                         return;
+                    }
+                } else {
+                    alert('Format file tidak didukung. Harap unggah CSV atau JSON.');
+                    return;
+                }
+                
+                if (newData.length > 0) {
+                     renderDashboard(newData);
+                     alert('Data berhasil dimuat!');
+                } else {
+                     alert('Gagal memuat data atau file kosong.');
+                }
+            };
+            
+            reader.readAsText(file);
+        });
+
+        // Parser CSV sederhana
+        function parseCSV(csvText) {
+             const lines = csvText.split('\n').filter(line => line.trim() !== '');
+             if (lines.length < 2) return [];
+             
+             const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+             const requiredHeaders = ['periode', 'unit/area', 'produksi', 'penjualan', 'area', 'harga'];
+
+             if (!requiredHeaders.every(h => headers.includes(h))) {
+                 alert('File CSV harus memiliki kolom: Periode, Unit/Area, Produksi, Penjualan, Area, Harga');
+                 return [];
+             }
+             
+             const data = [];
+             for (let i = 1; i < lines.length; i++) {
+                 const values = lines[i].split(',');
+                 if (values.length !== headers.length) continue; 
+                 
+                 const item = {};
+                 headers.forEach((header, index) => {
+                     let value = values[index].trim();
+                     if (['produksi', 'penjualan', 'area', 'harga'].includes(header)) {
+                         item[header] = parseFloat(value.replace(/\./g, '').replace(/,/g, '.')); // Penanganan angka
+                     } else if (header === 'unit/area') {
+                         item['unit'] = value;
+                     } else {
+                         item[header] = value;
+                     }
+                 });
+                 // Asumsi nama kolom yang benar: periode, unit, produksi, penjualan, area, harga
+                 data.push(item);
+             }
+             return data.filter(item => item.produksi !== undefined && !isNaN(item.produksi));
+        }
+
+        // --- FUNGSI UNDUH DATA ---
+        function unduhSemuaData() {
+            if (dataKelapaSawit.length === 0) {
+                alert("Tidak ada data untuk diunduh.");
+                return;
+            }
+
+            // Buat konten CSV
+            const header = "Periode,Unit/Area,Produksi (Ton),Penjualan (Ton),Area (Ha),Harga CPO ($/Ton)\n";
+            const csvRows = dataKelapaSawit.map(item => 
+                `${item.periode},${item.unit},${item.produksi},${item.penjualan},${item.area},${item.harga}`
+            ).join('\n');
+            
+            const csvContent = header + csvRows;
+            
+            // Buat objek Blob dan tautan unduh
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "Data_Kelapa_Sawit_" + new Date().toISOString().slice(0, 10) + ".csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // --- INTI: Panggil fungsi render saat dokumen siap (menggunakan data dummy) ---
+        $(document).ready(function() {
+            renderDashboard(dataKelapaSawit);
+        });
+
+    </script>
+</body>
+</html>
